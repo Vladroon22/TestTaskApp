@@ -10,13 +10,18 @@ import (
 
 func Multiplicate(rtp float64) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+		RTP := 0.0
+		gen := 25000
+		for range gen {
+			rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-		seqs := genSequence(rnd)
-		sum1, sum0 := calculateRTP(rtp, seqs)
+			seqs := genSequence(rnd)
+			sum1, sum0 := calculateRTP(rtp, seqs)
 
-		RTP := sum1 / sum0
-		writeJSON(w, http.StatusOK, map[string]interface{}{"result": RTP})
+			RTP += sum1 / sum0
+		}
+
+		writeJSON(w, http.StatusOK, map[string]interface{}{"result": RTP / float64(gen)})
 	}
 }
 
