@@ -13,54 +13,23 @@ func Multiplicate(rtp float64) http.HandlerFunc {
 		rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 		seqs := genSequence(rnd)
-		mults := genMults(rtp, rnd, seqs)
-		trans := transformed(mults, seqs)
-
-		sum1, sum0 := calculateRTP(seqs, trans)
+		sum1, sum0 := calculateRTP(rtp, seqs)
 
 		RTP := sum1 / sum0
 		writeJSON(w, http.StatusOK, map[string]interface{}{"result": RTP})
 	}
 }
 
-func calculateRTP(seqs, trans []float64) (float64, float64) {
+func calculateRTP(rtp float64, seqs []float64) (float64, float64) {
 	sum1 := 0.0
 	sum0 := 0.0
 
 	for i := range seqs {
 		sum0 += seqs[i]
-		sum1 += trans[i]
 	}
+	sum1 += sum0 * rtp
 
 	return sum1, sum0
-}
-
-func transformed(mults, seqs []float64) []float64 {
-	trans := make([]float64, len(seqs))
-	for i, num := range seqs {
-		mult := mults[i]
-
-		Mult := (mult - 1.0) / (10000.0 - 1.0)
-		switch {
-		case num < 10:
-			trans[i] = num * Mult * 0.5
-		case num < 100:
-			trans[i] = num * Mult * 0.7
-		case num < 1000:
-			trans[i] = num * Mult * 0.9
-		default:
-			trans[i] = num * Mult
-		}
-	}
-	return trans
-}
-
-func genMults(rtp float64, rnd *rand.Rand, seqs []float64) []float64 {
-	mults := make([]float64, len(seqs))
-	for i := range seqs {
-		mults[i] = genMultiplier(rtp, rnd)
-	}
-	return mults
 }
 
 func genSequence(rnd *rand.Rand) []float64 {
@@ -72,29 +41,6 @@ func genSequence(rnd *rand.Rand) []float64 {
 		sequences[i] = randomFloat(min, max, rnd)
 	}
 	return sequences
-}
-
-func genMultiplier(rtp float64, rnd *rand.Rand) float64 {
-	mu := sync.Mutex{}
-	mu.Lock()
-	defer mu.Unlock()
-
-	min := 1.0
-	max := 10000.0
-
-	base := rnd.Float64()*(max-min) + min
-
-	// Корректируем множитель на основе RTP
-	// Чем выше RTP, тем выше множители в среднем
-	adjusted := base * (0.5 + rtp)
-
-	if adjusted < min {
-		return min
-	} else if adjusted > max {
-		return max
-	}
-
-	return adjusted
 }
 
 func randomFloat(min, max float64, rnd *rand.Rand) float64 {
